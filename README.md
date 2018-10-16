@@ -1,15 +1,13 @@
 # biz.jmaconsulting.batchthresholdbundling
 
-![Screenshot](/images/screenshot.png)
-
-(*FIXME: In one or two paragraphs, describe what the extension does and why one would download it. *)
+This extension bundle small transactions into single entry during contribution batch export.
 
 The extension is licensed under [AGPL-3.0](LICENSE.txt).
 
 ## Requirements
 
 * PHP v5.4+
-* CiviCRM (*FIXME: Version number*)
+* CiviCRM v5.7+
 
 ## Installation (Web UI)
 
@@ -37,8 +35,4 @@ cv en batchthresholdbundling
 
 ## Usage
 
-(* FIXME: Where would a new user navigate to get started? What changes would they see? *)
-
-## Known Issues
-
-(* FIXME *)
+Currently this extension bundle up contribution's financial entries based on threshold amount as per CiviContribute setting 'Contribution threshold amount for bundling', before translated into General Ledger entries for Sage Intacct.
