@@ -66,28 +66,29 @@ function batchthresholdbundling_civicrm_preProcess($formName, &$form) {
 }
 
 function batchthresholdbundling_civicrm_batchItems(&$queryResults, &$financialItems) {
-  $thresholdAmount = (float) Civi::settings()->get('threshold_bundling_amount');
+  $thresholdAmount = CRM_Contribute_BAO_Contribution::checkContributeSettings('threshold_bundling_amount') ?: Civi::settings()->get('threshold_bundling_amount');
   if ($thresholdAmount > 0) {
     if (!empty($financialItems['ENTRIES'])) {
       $entries = $financialItems['ENTRIES'];
       $accountCollection = CRM_Utils_Array::collect('ACCOUNTNO', $entries);
+      // $totalAmounts stores total amount of each FAs
+      // $unsetIDs store entries IDs that are bundled up into one and need to be deleted
       $totalAmounts = $unsetIDs = [];
       foreach ($accountCollection as $id => $account) {
-        $unsetIDs[$account][] = $id;
-        $totalAmounts[$account] = empty($totalAmounts[$account]) ? $entries[$id]['AMOUNT'] : ($totalAmounts[$account] + $entries[$id]['AMOUNT']);
+        if ($entries[$id]['CONTRIBUTION_AMOUNT'] <= $thresholdAmount) {
+          $unsetIDs[$account][] = $id;
+          $totalAmounts[$account] = empty($totalAmounts[$account]) ? $entries[$id]['AMOUNT'] : ($totalAmounts[$account] + $entries[$id]['AMOUNT']);
+        }
       }
       foreach ($totalAmounts as $account => $amountTotal) {
-        if ($amountTotal <= $thresholdAmount) {
-          $key = end($unsetIDs[$account]);
-          $financialItems['ENTRIES'][] = array_merge($entries[$key], ['AMOUNT' => $amountTotal]);
-          foreach ($unsetIDs[$account] as $id) {
-            unset($financialItems['ENTRIES'][$id]);
-          }
+        $key = end($unsetIDs[$account]);
+        $financialItems['ENTRIES'][] = array_merge($entries[$key], ['AMOUNT' => $amountTotal]);
+        foreach ($unsetIDs[$account] as $id) {
+          unset($financialItems['ENTRIES'][$id]);
         }
       }
     }
   }
-
 }
 /**
  * Implements hook_civicrm_install().
