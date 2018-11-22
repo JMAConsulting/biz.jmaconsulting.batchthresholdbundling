@@ -70,7 +70,7 @@ function batchthresholdbundling_civicrm_batchItems(&$queryResults, &$financialIt
   if ($thresholdAmount > 0) {
     if (!empty($financialItems['ENTRIES'])) {
       $entries = $financialItems['ENTRIES'];
-      $accountCollection = CRM_Utils_Array::collect('ACCOUNTNO', $entries);
+      $accountCollection = CRM_Utils_Array::collect('ACCOUNTID', $entries);
       // $totalAmounts stores total amount of each FAs
       // $unsetIDs store entries IDs that are bundled up into one and need to be deleted
       $totalAmounts = $unsetIDs = [];
