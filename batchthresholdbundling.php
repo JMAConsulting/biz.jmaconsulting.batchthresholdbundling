@@ -32,9 +32,9 @@ function batchthresholdbundling_civicrm_alterSettingsMetaData(&$settingsMetadata
     'group_name' => 'Contribute Preferences',
     'group' => 'contribute',
     'name' => 'threshold_bundling_amount',
-    'type' => 'Money',
-    'html_type' => 'text',
     'quick_form_type' => 'Element',
+    'type' => 'String',
+    'html_type' => 'text',
     'default' => 1000.00,
     'add' => '5.6',
     'title' => 'Contribution threshold amount for bundling',
@@ -79,13 +79,19 @@ function batchthresholdbundling_civicrm_batchItems(&$queryResults, &$financialIt
           $unsetIDs[$account][] = $id;
           $totalAmounts[$account] = empty($totalAmounts[$account]) ? $entries[$id]['AMOUNT'] : ($totalAmounts[$account] + $entries[$id]['AMOUNT']);
         }
+        unset($entries[$id]['CONTRIBUTION_AMOUNT']);
+        unset($financialItems['ENTRIES'][$id]['CONTRIBUTION_AMOUNT']);
       }
       foreach ($totalAmounts as $account => $amountTotal) {
         $key = end($unsetIDs[$account]);
-        $financialItems['ENTRIES'][] = array_merge($entries[$key], ['AMOUNT' => $amountTotal]);
+        $description = [];
+        $finalEntry = array_merge($entries[$key], ['AMOUNT' => CRM_Contribute_BAO_Contribution_Utils::formatAmount($amountTotal)]);
         foreach ($unsetIDs[$account] as $id) {
+          $description[] = $financialItems['ENTRIES'][$id]['DESCRIPTION'];
           unset($financialItems['ENTRIES'][$id]);
         }
+        $description = implode(', ', array_unique($description));
+        $financialItems['ENTRIES'][] = array_merge($finalEntry, ['DESCRIPTION' => $description]);
       }
     }
   }
