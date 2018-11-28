@@ -84,13 +84,12 @@ function batchthresholdbundling_civicrm_batchItems(&$queryResults, &$financialIt
       }
       foreach ($totalAmounts as $account => $amountTotal) {
         $key = end($unsetIDs[$account]);
-        $description = [];
         $finalEntry = array_merge($entries[$key], ['AMOUNT' => CRM_Contribute_BAO_Contribution_Utils::formatAmount($amountTotal)]);
         foreach ($unsetIDs[$account] as $id) {
-          $description[] = $financialItems['ENTRIES'][$id]['DESCRIPTION'];
+          $accountName = $financialItems['ENTRIES'][$id]['account_name'];
           unset($financialItems['ENTRIES'][$id]);
         }
-        $description = implode(', ', array_unique($description));
+        $description = "Bundled transactions: $accountName";
         $financialItems['ENTRIES'][] = array_merge($finalEntry, ['DESCRIPTION' => $description]);
       }
     }
