@@ -43,6 +43,21 @@ function batchthresholdbundling_civicrm_alterSettingsMetaData(&$settingsMetadata
     'description' => '',
     'help_text' => '',
   );
+  $settingsMetadata['bundle_debits'] = array(
+    'group_name' => 'Contribute Preferences',
+    'group' => 'contribute',
+    'name' => 'bundle_debits',
+    'quick_form_type' => 'YesNo',
+    'type' => 'Boolean',
+    'html_type' => 'radio',
+    'default' => TRUE,
+    'add' => '5.6',
+    'title' => 'Always bundle debits into a single transaction',
+    'is_domain' => 1,
+    'is_contact' => 0,
+    'description' => '',
+    'help_text' => 'This will bundle all your bank deposits when exporting to accounting software, which can ease bank reconciliation.',
+  );
 }
 
 /**
@@ -59,6 +74,7 @@ function batchthresholdbundling_civicrm_preProcess($formName, &$form) {
       $contributeSettings[$key] = $setting;
       if ($key == 'always_post_to_accounts_receivable') {
         $contributeSettings['threshold_bundling_amount'] = CRM_Core_BAO_Setting::CONTRIBUTE_PREFERENCES_NAME;
+        $contributeSettings['bundle_debits'] = CRM_Core_BAO_Setting::CONTRIBUTE_PREFERENCES_NAME;
       }
     }
     $form->setVar('_settings', $contributeSettings);
@@ -67,6 +83,8 @@ function batchthresholdbundling_civicrm_preProcess($formName, &$form) {
 
 function batchthresholdbundling_civicrm_batchItems(&$queryResults, &$financialItems) {
   $thresholdAmount = CRM_Contribute_BAO_Contribution::checkContributeSettings('threshold_bundling_amount') ?: Civi::settings()->get('threshold_bundling_amount');
+  $bundleDebits = CRM_Contribute_BAO_Contribution::checkContributeSettings('bundle_debits') ?: Civi::settings()->get('bundle_debits');
+  CRM_Core_Error::debug_var('financialItems', $financialItems);
   if ($thresholdAmount > 0) {
     if (!empty($financialItems['ENTRIES'])) {
       $entries = $financialItems['ENTRIES'];
@@ -75,6 +93,8 @@ function batchthresholdbundling_civicrm_batchItems(&$queryResults, &$financialIt
       // $unsetIDs store entries IDs that are bundled up into one and need to be deleted
       $totalAmounts = $unsetIDs = [];
       foreach ($accountCollection as $id => $account) {
+        if ($entries[$id]['CONTRIBUTION_AMOUNT'] <= $thresholdAmount ||
+            ($bundleDebits && (int) $entries[$id]['AMOUNT'] > 0)) {
         if ($entries[$id]['CONTRIBUTION_AMOUNT'] <= $thresholdAmount) {
           $unsetIDs[$account][] = $id;
           $totalAmounts[$account] = empty($totalAmounts[$account]) ? $entries[$id]['AMOUNT'] : ($totalAmounts[$account] + $entries[$id]['AMOUNT']);
