@@ -84,7 +84,6 @@ function batchthresholdbundling_civicrm_preProcess($formName, &$form) {
 function batchthresholdbundling_civicrm_batchItems(&$queryResults, &$financialItems) {
   $thresholdAmount = CRM_Contribute_BAO_Contribution::checkContributeSettings('threshold_bundling_amount') ?: Civi::settings()->get('threshold_bundling_amount');
   $bundleDebits = CRM_Contribute_BAO_Contribution::checkContributeSettings('bundle_debits') ?: Civi::settings()->get('bundle_debits');
-  CRM_Core_Error::debug_var('financialItems', $financialItems);
   if ($thresholdAmount > 0) {
     if (!empty($financialItems['ENTRIES'])) {
       $entries = $financialItems['ENTRIES'];
@@ -95,7 +94,6 @@ function batchthresholdbundling_civicrm_batchItems(&$queryResults, &$financialIt
       foreach ($accountCollection as $id => $account) {
         if ($entries[$id]['CONTRIBUTION_AMOUNT'] <= $thresholdAmount ||
             ($bundleDebits && (int) $entries[$id]['AMOUNT'] > 0)) {
-        if ($entries[$id]['CONTRIBUTION_AMOUNT'] <= $thresholdAmount) {
           $unsetIDs[$account][] = $id;
           $totalAmounts[$account] = empty($totalAmounts[$account]) ? $entries[$id]['AMOUNT'] : ($totalAmounts[$account] + $entries[$id]['AMOUNT']);
         }
