@@ -10,6 +10,12 @@ use CRM_Batchthresholdbundling_ExtensionUtil as E;
  */
 function batchthresholdbundling_civicrm_config(&$config) {
   _batchthresholdbundling_civix_civicrm_config($config);
+  if (isset(Civi::$statics[__FUNCTION__])) {
+    return;
+  }
+  Civi::$statics[__FUNCTION__] = 1;
+
+  Civi::dispatcher()->addListener('hook_civicrm_batchItems', 'bundleTrxns');
 }
 
 /**
@@ -65,9 +71,10 @@ function batchthresholdbundling_civicrm_preProcess($formName, &$form) {
   }
 }
 
-function batchthresholdbundling_civicrm_batchItems(&$queryResults, &$financialItems) {
+function bundleTrxns($event) {
   $thresholdAmount = CRM_Contribute_BAO_Contribution::checkContributeSettings('threshold_bundling_amount') ?: Civi::settings()->get('threshold_bundling_amount');
   if ($thresholdAmount > 0) {
+    $financialItems = $event->items;
     if (!empty($financialItems['ENTRIES'])) {
       $entries = $financialItems['ENTRIES'];
       $accountCollection = CRM_Utils_Array::collect('ACCOUNTID', $entries);
@@ -93,6 +100,7 @@ function batchthresholdbundling_civicrm_batchItems(&$queryResults, &$financialIt
         $financialItems['ENTRIES'][] = array_merge($finalEntry, ['DESCRIPTION' => $description]);
       }
     }
+    $event->items = $financialItems;
   }
 }
 /**
