@@ -90,7 +90,7 @@ function bundleTrxns($event) {
           if (in_array($account, $bankingFeesIds)) {
             $bankAccount = $entries[$id]['account_name'];
             $unsetBankingFeeIds[$bankAccount][] = $id;
-            $totalBankingFeeAmounts[$bankAccount] = empty($totalBankingFeeAmounts[$account]) ? $entries[$id]['AMOUNT'] : ($totalBankingFeeAmounts[$account] + $entries[$id]['AMOUNT']);
+            $totalBankingFeeAmounts[$bankAccount] = empty($totalBankingFeeAmounts[$bankAccount]) ? $entries[$id]['AMOUNT'] : ($totalBankingFeeAmounts[$bankAccount] + $entries[$id]['AMOUNT']);
           }
           else {
             // All non-banking fee entries are bundled by financial account ID.
