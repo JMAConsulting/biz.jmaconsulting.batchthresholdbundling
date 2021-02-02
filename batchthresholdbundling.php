@@ -72,7 +72,10 @@ function batchthresholdbundling_civicrm_preProcess($formName, &$form) {
 }
 
 function bundleTrxns($event) {
+  // Get the threshold amount from the Settings page.
   $thresholdAmount = CRM_Contribute_BAO_Contribution::checkContributeSettings('threshold_bundling_amount') ?: Civi::settings()->get('threshold_bundling_amount');
+  // Get the financial account ID(s) for banking fees.  We're going to separate these by bank account (for orgs with multiple bank accounts).
+  $bankingFeesIds = batchthresholdbundling_getBankingFinancialAccountIds();
   if ($thresholdAmount > 0) {
     $financialItems = $event->items;
     if (!empty($financialItems['ENTRIES'])) {
@@ -80,15 +83,35 @@ function bundleTrxns($event) {
       $accountCollection = CRM_Utils_Array::collect('ACCOUNTID', $entries);
       // $totalAmounts stores total amount of each FAs
       // $unsetIDs store entries IDs that are bundled up into one and need to be deleted
-      $totalAmounts = $unsetIDs = [];
+      $totalAmounts = $totalBankingFeeAmounts = $unsetIDs = $unsetBankingFeeIds = [];
       foreach ($accountCollection as $id => $account) {
         if ($entries[$id]['CONTRIBUTION_AMOUNT'] <= $thresholdAmount) {
-          $unsetIDs[$account][] = $id;
-          $totalAmounts[$account] = empty($totalAmounts[$account]) ? $entries[$id]['AMOUNT'] : ($totalAmounts[$account] + $entries[$id]['AMOUNT']);
+          // Banking fees are a special case and must be broken down by bank account, so we generate different totals here.
+          if (in_array($account, $bankingFeesIds)) {
+            $bankAccount = $entries[$id]['account_name'];
+            $unsetBankingFeeIds[$bankAccount][] = $id;
+            $totalBankingFeeAmounts[$bankAccount] = empty($totalBankingFeeAmounts[$account]) ? $entries[$id]['AMOUNT'] : ($totalBankingFeeAmounts[$account] + $entries[$id]['AMOUNT']);
+          }
+          else {
+            // All non-banking fee entries are bundled by financial account ID.
+            $unsetIDs[$account][] = $id;
+            $totalAmounts[$account] = empty($totalAmounts[$account]) ? $entries[$id]['AMOUNT'] : ($totalAmounts[$account] + $entries[$id]['AMOUNT']);
+          }
         }
         unset($entries[$id]['CONTRIBUTION_AMOUNT']);
         unset($financialItems['ENTRIES'][$id]['CONTRIBUTION_AMOUNT']);
       }
+      // Bundle the banking fees (by bank account) and remove the bundled entries.
+      foreach ($totalBankingFeeAmounts as $bankAccount => $feeTotal) {
+        $key = end($unsetBankingFeeIds[$bankAccount]);
+        $finalEntry = array_merge($entries[$key], ['AMOUNT' => CRM_Contribute_BAO_Contribution_Utils::formatAmount($feeTotal)]);
+        foreach ($unsetBankingFeeIds[$bankAccount] as $id) {
+          unset($financialItems['ENTRIES'][$id]);
+        }
+        $description = "Bundled banking fee transactions: $bankAccount";
+        $financialItems['ENTRIES'][] = array_merge($finalEntry, ['DESCRIPTION' => $description]);
+      }
+      // Bundle the transactions (by financial account ID) and remove the bundled entries.
       foreach ($totalAmounts as $account => $amountTotal) {
         $key = end($unsetIDs[$account]);
         $finalEntry = array_merge($entries[$key], ['AMOUNT' => CRM_Contribute_BAO_Contribution_Utils::formatAmount($amountTotal)]);
@@ -103,6 +126,21 @@ function bundleTrxns($event) {
     $event->items = $financialItems;
   }
 }
+
+/**
+ * Returns an array of all financial account IDs of type "Banking Fees".
+ */
+function batchthresholdbundling_getBankingFinancialAccountIds() : array {
+  $result = civicrm_api3('FinancialAccount', 'get', [
+    'sequential' => 1,
+    'return' => ["id"],
+    'name' => "Banking Fees",
+    'options' => ['limit' => 0],
+  ])['values'];
+  $feeIds = array_column($result, 'id');
+  return $feeIds;
+}
+
 /**
  * Implements hook_civicrm_install().
  *
