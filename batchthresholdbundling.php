@@ -108,8 +108,11 @@ function bundleTrxns($event) {
         foreach ($unsetBankingFeeIds[$bankAccount] as $id) {
           unset($financialItems['ENTRIES'][$id]);
         }
-        $description = "Bundled banking fee transactions: $bankAccount";
-        $financialItems['ENTRIES'][] = array_merge($finalEntry, ['DESCRIPTION' => $description]);
+        // If the amounts wash to zero, we don't need to include it at all.  E.g. when all payments on a financial account are reversed.
+        if ($finalEntry['AMOUNT']) {
+          $description = "Bundled banking fee transactions: $bankAccount";
+          $financialItems['ENTRIES'][] = array_merge($finalEntry, ['DESCRIPTION' => $description]);
+        }
       }
       // Bundle the transactions (by financial account ID) and remove the bundled entries.
       foreach ($totalAmounts as $account => $amountTotal) {
@@ -119,8 +122,11 @@ function bundleTrxns($event) {
           $accountName = $financialItems['ENTRIES'][$id]['account_name'];
           unset($financialItems['ENTRIES'][$id]);
         }
-        $description = "Bundled transactions: $accountName";
-        $financialItems['ENTRIES'][] = array_merge($finalEntry, ['DESCRIPTION' => $description]);
+        // If the amounts wash to zero, we don't need to include it at all.  E.g. when all payments on a financial account are reversed.
+        if ($finalEntry['AMOUNT']) {
+          $description = "Bundled transactions: $accountName";
+          $financialItems['ENTRIES'][] = array_merge($finalEntry, ['DESCRIPTION' => $description]);
+        }
       }
     }
     $event->items = $financialItems;
